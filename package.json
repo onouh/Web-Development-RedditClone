@@ -1,0 +1,32 @@
+{
+  "name": "reddit-clone",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Fall 2026 Web Development project — Reddit clone (MERN + Socket.IO + AI)",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "seed": "npm run seed -w server --",
+    "db:memory": "npm run db:memory -w server",
+    "schema:svg": "node scripts/render-schema.mjs",
+    "test": "npm run test -w server",
+    "test:e2e": "playwright test",
+    "lint": "npm run lint -w server && npm run lint -w client",
+    "format": "prettier --write \"{server,client}/src/**/*.{js,jsx}\" \"*.md\" \"docs/*.md\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "concurrently": "^9.1.0",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

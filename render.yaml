@@ -1,0 +1,31 @@
+# Single-origin deployment: Express API + built SPA + Socket.IO on one HTTPS host.
+# Set MONGO_URI (MongoDB Atlas SRV) and the public URL in the Render dashboard.
+services:
+  - type: web
+    name: threadit
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CROSS_SITE_COOKIES
+        value: "false"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODEL_NAME
+        value: gemini-2.0-flash
+      - key: AI_API_KEY
+        sync: false
