@@ -8,6 +8,8 @@ Browser: Chrome for Testing `159.0.8154.6`, headless, driven over CDP at `127.0.
 
 Threadit reproduces the **observable structure and behaviour** of Reddit's public community page: the same regions (top bar, primary navigation, feed of article cards, community rail), the same interactive vocabulary (vote pill, comment count, share, sort, join), and the same search/auth entry points. It does *not* reproduce Reddit's DOM, component names, class names or styling, and it is not claimed to.
 
+Four captures back this up: Reddit's archived community feed and post page, and the clone's `/popular`, `/r/webdev` and post-detail routes, so the community header, rules, moderator list and comment thread are compared directly rather than inferred from the feed.
+
 This is **structural and behavioural parity**, not source-level equivalence. REA performs passive CDP inspection; it can prove what the clone renders and exposes, never that a particular upstream source file was copied.
 
 ## What REA was used for
@@ -16,7 +18,7 @@ REA is a passive inspection toolkit, not a test runner. In this audit it:
 
 - attached to a real Chrome over CDP and captured the live DOM tree, accessibility tree, resource inventory and console metadata;
 - reported the page without executing actions, mutating state, or reading authenticated data;
-- produced comparable evidence bundles for a public Reddit page and for the running Threadit app, which were then compared field by field.
+- produced comparable evidence bundles for public Reddit pages (community feed and post detail) and for three routes of the running Threadit app, which were then compared field by field.
 
 Behavioural claims (voting, joins, nested replies, realtime chat, moderator tooling, responsive layout) come from the Playwright walkthrough, not from REA — REA sees a snapshot, not a workflow.
 
@@ -26,6 +28,9 @@ Behavioural claims (voting, joins, nested replies, realtime chat, moderator tool
 | --- | --- | --- | --- |
 | Reddit r/webdev (archived) | `https://web.archive.org/web/20250527061510/https://www.reddit.com/r/webdev/` | `5F7D0A728DFC67C809AFDE5A3C78BD58` | `.tools/rea/evidence/reddit-archive-inspect.json` (971 KB), `reddit-rea.png` |
 | Threadit Popular (guest, recaptured after the fix) | `http://127.0.0.1:5173/popular` | `CCC1D0FECA2B88542FB8DBB45B31D367` | `.tools/rea/evidence/threadit-postfix-inspect.json` (296 KB), `threadit-postfix-rea.png` |
+| Threadit community (guest) | `http://127.0.0.1:5173/r/webdev` | `A2064C2471B4675881C5588BD4F5DD4A` | `.tools/rea/evidence/threadit-community-inspect.json` (176 KB), `threadit-community-rea.png` |
+| Threadit post detail (guest) | `http://127.0.0.1:5173/r/webdev/comments/6b0707e87bbe4196d2cbf7ab` | `EE01B6B9997C28A32C53244ADF434611` | `.tools/rea/evidence/threadit-post-inspect.json` (204 KB), `threadit-post-rea.png` |
+| Reddit post + community header (archived) | `https://web.archive.org/web/20250527052034/https://www.reddit.com/r/webdev/comments/1kwe45l/the_skills_no_one_teaches_engineers_mindset/` | `0E4F7E3A7B9DE0E540705E08917B2317` | `.tools/rea/evidence/reddit-post-inspect.json` (1,019 KB), `reddit-post-rea.png` |
 
 The `.json` bundles and decoded `.png` captures are under `.tools/`, which is gitignored; the findings are recorded here so the audit survives without them. The pre-fix Threadit bundle is kept alongside (`threadit-inspect.json`, target `138C54CF1A699863DD2528B0CABD1A23`) so the effect of the landmark fix can be checked directly.
 
@@ -33,7 +38,7 @@ The `.json` bundles and decoded `.png` captures are under `.tools/`, which is gi
 
 ## Quantitative comparison
 
-Counts come from the two `normalized_result` bundles (`dom.nodes`, `accessibility.nodes`, `resources`).
+Counts come from the `normalized_result` bundles (`dom.nodes`, `accessibility.nodes`, `resources`).
 
 | Signal | Reddit r/webdev (archived) | Threadit `/popular` |
 | --- | --- | --- |
@@ -66,6 +71,38 @@ The comparison that matters is the **set of regions and controls**, not the node
 
 The fresh Threadit console was also clean: Vite's connect banner, the React DevTools notice and two React Router v7 future-flag warnings, with **no errors and no failed local requests**. Reddit's console evidence was excluded by REA's origin policy (`disallowed_origin`), so no equivalent statement is possible for the archived page.
 
+## Community page and post detail
+
+`/popular` is only the feed. These captures cover the surfaces it cannot show: the community header with its rules and moderators, and the post page with its comment thread.
+
+| Signal | Reddit feed (archived) | Reddit post (archived) | Threadit `/r/webdev` | Threadit post |
+| --- | --- | --- | --- | --- |
+| DOM nodes | 5,585 | 5,387 | 527 | 627 |
+| Accessibility nodes | 1,389 | 1,167 | 482 | 597 |
+| `article` | 3 | 0 (`SHREDDIT-POST`) | 3 | 1 |
+| `heading` | 15 | 1 (`Post Title: …`) | 7 | 6 |
+| `button` | 4 | 10 | 32 | 41 |
+| `link` | 50 | 38 | 26 | 27 |
+| `banner` / `main` / `navigation` | 1 / 1 / 3 | 1 / 1 / 3 | 1 / 1 / 1 | 1 / 1 / 1 |
+| `complementary` | 3 | 3 | 2 | 2 |
+| `list` / `listitem` | 3 / 10 | 3 / 9 | 2 / 5 | 2 / 5 |
+| `details` / `summary` | 15 / 15 | 8 / 8 | 0 / 0 | 0 / 0 |
+| Console errors | excluded | 0 | 0 | 0 |
+
+### Community header
+
+Reddit's archived community page exposes the identity in a heading (`r/webdev`), a Join action in the masthead, a banner, and an about rail (`Community information`) carrying the description, creation date, public status, member/online counts and size rank, with `RULES`, `MODERATORS`, `COMMUNITY BOOKMARKS`, `LINKS` and `RELATED COMMUNITES` sections.
+
+Threadit's `/r/webdev` capture matches that shape at the level of information and controls: a header card with the avatar, `r/webdev`, `Web Development · 5 members` and a **Join** button; flair filters (`All posts`, `Discussion`, `Help`, `Showcase`, `News`); and a rail with the description, `Members` and `Created` definition pairs, four numbered **Community rules** and a **Moderators** list (`u/alice_dev`). On the clone, both the community and post routes expose one `main`, one `banner` and two `complementary` regions.
+
+Differences are scope, not omission: Threadit has no bookmarks / related-communities / size-rank block, and its rules are list text under one heading rather than Reddit's one-heading-per-rule pattern.
+
+### Post page and comment thread
+
+Threadit's post capture renders the post as a single `article` with the title as a heading, the vote pill, comment count, Share, Save and Summary controls, a **Thread TL;DR** card, then `6 comments` with a `Newest first` combobox, a guest `Log in to join the conversation.` prompt, and the tree itself: author, `OP` / `MOD` badges, age, body, and per-comment `Collapse thread`, `Comment options` and `Reply` controls (six of the first two, eighteen `Reply` controls across the nested replies).
+
+Reddit's archived counterpart was captured too, and it shows the header, post body, `Share`, and the community about panel — but **its comment subtree never populated**. The archive left a loader placeholder below the post (no comment element, no comment text in the DOM or the fetched page), so the Reddit half of the comment comparison is unavailable; only the clone's thread structure is evidenced here. Reddit's collapsing idiom is present page-wide as native `details`/`summary` pairs (8 on the post page, 15 on the community feed).
+
 ## Feature-by-feature
 
 | Reddit surface (observed via REA) | Threadit implementation | Evidence | Result |
@@ -76,8 +113,8 @@ The fresh Threadit console was also clean: Vite's connect banner, the React DevT
 | Vote pill with score, up/down, comment count, Share, overflow menu | `VoteControl`, comment link, Share, `Post options` | AX names `Upvote`, `Downvote`, `Share`, `Post options`, `Summary`, `Save post` | Match |
 | Sort control (`Best` disclosure on Reddit) | `SortBar`: Hot / New / Top + time window, `Load more posts` | AX names; Playwright test 1 switches New → Top | Match (segmented instead of dropdown) |
 | Right rail: about/community info, bookmarks, promotion | `RightRail`: Popular communities with member counts and Create a community on `/popular`; Home adds Top this week; footer links | 2 `complementary`; AX heading `Popular communities` | Match |
-| Community header: banner, `r/webdev`, Create Post, Join, members / online / rank, rules & bookmarks | `Community.jsx`: banner, name, Join, sort, rules, member count | Not in either REA capture; Playwright test 4 (optimistic Join) + seed data | Match (verified behaviourally, not by snapshot) |
-| Nested, collapsible comment threads (Reddit renders `details`/`summary`, 15 each) | `CommentTree.jsx` with materialised-path replies and collapse | Playwright test 3: seeded thread collapses/expands, real reply lands in tree | Match |
+| Community header: banner, `r/webdev`, Create Post, Join, members / online / rank, rules & bookmarks | `Community.jsx`: header card (avatar, name, member count, Join), flair filters, about rail with description, Members, Created, Community rules, Moderators | Community capture: `h1` r/webdev, Join button, `Community rules`, `Moderators`; Playwright test 4 (optimistic Join) | Match on identity, join, rules and moderators; no bookmarks/related-communities block (deliberate) |
+| Nested, collapsible comment threads (Reddit uses `details`/`summary` disclosures) | `CommentTree.jsx`: `6 comments`, per-comment Collapse thread / Comment options / Reply, OP and MOD badges, indented nesting, `Newest first` sort | Post capture: 6 `Collapse thread`, 6 `Comment options`, 18 `Reply`, 1 `combobox`; Reddit archive's comment subtree never populated (see *Limitations*); Playwright test 3 collapses, expands and posts a reply | Match on the clone side; Reddit comment content unavailable |
 | Search entry point with scoped placeholder ("Search in r/webdev") | `SearchBar` + `/search` with Communities / People / Posts tabs and typeahead | `search` + `searchbox` landmarks; Vitest search assertions | Match |
 | Log in / Sign up as plain links; guest feed | `/login`, `/register`; guests get a popular fallback feed | AX link names; Playwright test 1 logs in through the form | Match |
 | Upvote/downvote correctness under concurrency (Reddit behaviour, not observable via DOM) | ACID vote service: unique index, single transaction, exact deltas, retries | Vitest 13/13, incl. 20-request same-user storm and 50-user storm | Match (server-side) |
@@ -93,15 +130,17 @@ The fresh Threadit console was also clean: Vite's connect banner, the React DevT
 - **Landmark granularity.** Reddit exposes 3 `navigation` and 3 `complementary` landmarks (primary, resources, footer / entity panel, promotion, community info). Threadit exposes 1 and 2 respectively. Simpler, and intentional: the clone has one primary nav and two rails.
 - **No custom elements.** Reddit's `SHREDDIT-*` / `FACEPLATE-*` / `REDDIT-*` components are its private UI platform. Threadit deliberately uses semantic HTML and Tailwind instead; reproducing the component names would be cosmetic mimicry with no behavioural value.
 - **No skip-to-content link.** Reddit's first accessible link is "Skip to main content"; Threadit has none. Noted, not changed — outside the assignment's scope.
+- **Collapsing idiom.** Reddit collapses with native `details`/`summary` (15 pairs on the community feed, 8 on the post page); Threadit uses labelled buttons (`Collapse thread`) over React state. Behaviour is equivalent and exercised by Playwright, but the clone's control announces as a button rather than a disclosure triangle. Not changed.
 
 ## Limitations
 
 1. **The Reddit evidence is an archived snapshot** (27 May 2025), not today's live page. Reddit's current DOM may differ. The live site could not be inspected without solving a CAPTCHA or signing in, and neither was attempted.
-2. **REA's policy filter removed cross-origin evidence.** Both bundles report `policy_filtered` with `attach_limited`; Reddit excluded 37 metadata events and 10 resources as `disallowed_origin`, Threadit excluded 5 metadata and 2 resources. Network request lists are empty for both because observation began after load and cross-origin traffic was excluded, so **no API/network comparison was made**.
-3. **Guest view only for Threadit, one route and one moment.** The capture is the signed-out `/popular` page; authenticated surfaces were exercised by Playwright instead. Counts move with asynchronous feed/rail loading (the Home rail has an extra "Top this week" section that `/popular` does not), so treat single-digit differences between runs as timing, not structure.
-4. **Snapshot ≠ behaviour.** REA proves rendered structure. All interaction claims rest on the Playwright suite and on Vitest.
-5. **AI provider path not exercised.** With no `AI_API_KEY`, summaries and mod checks used the deterministic fallback; the same code path calls Gemini/OpenAI when a key is configured.
-6. **No source-level claim.** Matching DOM regions and accessible names cannot establish that any Reddit source was reused, and none was.
+2. **REA's policy filter removed cross-origin evidence.** Every bundle reports `policy_filtered` with `attach_limited`; Reddit excluded 37 metadata events and 10 resources as `disallowed_origin`, Threadit excluded 5 metadata and 2 resources. Network request lists are empty throughout because observation began after load and cross-origin traffic was excluded, so **no API/network comparison was made**.
+3. **Guest view only for Threadit.** All three clone captures are signed out (`/popular`, `/r/webdev`, post detail); authenticated surfaces were exercised by Playwright instead. Counts are one moment per route, and they move with asynchronous feed/rail loading (the Home rail carries an extra "Top this week" section that `/popular` does not), so treat single-digit differences between runs as timing, not structure.
+4. **The archived Reddit thread has no comments.** The post body, community header and Share control rendered, but the comment subtree never populated — no comment element, no comment text in the DOM or the fetched page, only a loader placeholder below the post. Comment content, nesting and voting therefore could not be compared against Reddit; the thread evidence in this audit is the clone's capture plus Playwright test 3, and Reddit's collapse idiom is inferred from the `details`/`summary` pairs present on its pages.
+5. **Snapshot ≠ behaviour.** REA proves rendered structure. All interaction claims rest on the Playwright suite and on Vitest.
+6. **AI provider path not exercised.** With no `AI_API_KEY`, summaries and mod checks used the deterministic fallback; the same code path calls Gemini/OpenAI when a key is configured.
+7. **No source-level claim.** Matching DOM regions and accessible names cannot establish that any Reddit source was reused, and none was.
 
 ## Reproducing this audit
 
@@ -110,9 +149,10 @@ The fresh Threadit console was also clean: Vite's connect banner, the React DevT
 .tools/node24/bin/node .tools/rea/node_modules/rea-agents/scripts/rea.mjs --version --json
 
 # Headless Chrome with CDP
-"/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+"/Users/<you>/Library/Caches/ms-playwright/chromium-1255/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
   --headless=new --remote-debugging-port=9222 \
   --user-data-dir=.tools/rea-profile about:blank
+# The path is printed by: node -e "console.log(require('playwright').chromium.executablePath())"
 
 REA=".tools/node24/bin/node .tools/rea/node_modules/rea-agents/scripts/rea.mjs"
 
