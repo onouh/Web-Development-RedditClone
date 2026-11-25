@@ -234,6 +234,7 @@ All endpoints are documented in Swagger with request bodies, validation errors (
 | `npm test` | Vitest suite with in-memory MongoDB replica set (13/13) |
 | `npm run test:e2e` | Playwright browser walkthrough against the running dev stack |
 | `npm run lint` | ESLint (server + client) |
+| `npm run audit:verify` | Re-derive every REA audit count from `docs/rea-evidence/` and fail on drift |
 | `npm run format` | Prettier |
 | `npm run openapi -w server` | Export OpenAPI + Postman collection |
 | `npm run schema:svg` | Regenerate the ERD image from `scripts/render-schema.mjs` |

@@ -8,7 +8,7 @@ Browser: Chrome for Testing `159.0.8154.6`, headless, driven over CDP at `127.0.
 
 Threadit reproduces the **observable structure and behaviour** of Reddit's public community page: the same regions (top bar, primary navigation, feed of article cards, community rail), the same interactive vocabulary (vote pill, comment count, share, sort, join), and the same search/auth entry points. It does *not* reproduce Reddit's DOM, component names, class names or styling, and it is not claimed to.
 
-Five captures back this up: Reddit's archived community feed and post page, and the clone's `/popular`, `/r/webdev` and post-detail routes, so the community header, rules and moderator list are compared directly rather than inferred from the feed, and the comment thread is captured on the clone side (Reddit's archived comments did not load — see *Limitations*).
+Six captures back this up: Reddit's archived community feed, its archived post page and an archived `old.reddit.com` rendering of the same thread, plus the clone's `/popular`, `/r/webdev` and post-detail routes. The community header, rules, moderator list and comment thread are therefore compared directly rather than inferred from the feed.
 
 This is **structural and behavioural parity**, not source-level equivalence. REA performs passive CDP inspection; it can prove what the clone renders and exposes, never that a particular upstream source file was copied.
 
@@ -31,6 +31,7 @@ Behavioural claims (voting, joins, nested replies, realtime chat, moderator tool
 | Threadit community (guest) | `http://127.0.0.1:5173/r/webdev` | `A2064C2471B4675881C5588BD4F5DD4A` | `docs/rea-evidence/threadit-community-inspect.json` (176 KB), `docs/rea-evidence/threadit-community-rea.png` |
 | Threadit post detail (guest) | `http://127.0.0.1:5173/r/webdev/comments/6b0707e87bbe4196d2cbf7ab` | `EE01B6B9997C28A32C53244ADF434611` | `docs/rea-evidence/threadit-post-inspect.json` (204 KB), `docs/rea-evidence/threadit-post-rea.png` |
 | Reddit post + community header (archived) | `https://web.archive.org/web/20250527052034/https://www.reddit.com/r/webdev/comments/1kwe45l/the_skills_no_one_teaches_engineers_mindset/` | `0E4F7E3A7B9DE0E540705E08917B2317` | `docs/rea-evidence/reddit-post-inspect.json` (1,019 KB), `docs/rea-evidence/reddit-post-rea.png` |
+| Reddit thread with comments (archived, `old.reddit`) | `https://web.archive.org/web/20250527051915/https://old.reddit.com/r/webdev/comments/1kwe45l/the_skills_no_one_teaches_engineers_mindset/` | `E8E5C76ED1A6B8D4D92A577D70A17C6A` | `docs/rea-evidence/reddit-old-inspect.json` (693 KB), `docs/rea-evidence/reddit-old-rea.png` |
 
 Every capture above is committed under `docs/rea-evidence/`, so the counts in this document can be re-derived from the repository alone: `dom.nodes`, `accessibility.nodes`, `resources` and `console.events` are read straight out of each `*-inspect.json`, and each `*-rea.png` is the viewport image decoded from the corresponding `capture-web-screenshot` result. The pre-fix Threadit bundle is committed alongside them as `docs/rea-evidence/threadit-inspect.json` (target `138C54CF1A699863DD2528B0CABD1A23`) so the effect of the landmark fix can be checked directly.
 
@@ -75,19 +76,19 @@ The fresh Threadit console was also clean: Vite's connect banner, the React DevT
 
 `/popular` is only the feed. These captures cover the surfaces it cannot show: the community header with its rules and moderators, and the post page with its comment thread.
 
-| Signal | Reddit feed (archived) | Reddit post (archived) | Threadit `/r/webdev` | Threadit post |
-| --- | --- | --- | --- | --- |
-| DOM nodes | 5,585 | 5,387 | 527 | 627 |
-| Accessibility nodes | 1,389 | 1,167 | 482 | 597 |
-| `article` | 3 | 0 (`SHREDDIT-POST`) | 3 | 1 |
-| `heading` | 15 | 1 (`Post Title: …`) | 7 | 6 |
-| `button` | 4 | 10 | 32 | 41 |
-| `link` | 50 | 38 | 26 | 27 |
-| `banner` / `main` / `navigation` | 1 / 1 / 3 | 1 / 1 / 3 | 1 / 1 / 1 | 1 / 1 / 1 |
-| `complementary` | 3 | 3 | 2 | 2 |
-| `list` / `listitem` | 3 / 10 | 3 / 9 | 2 / 5 | 2 / 5 |
-| `details` / `summary` | 15 / 15 | 8 / 8 | 0 / 0 | 0 / 0 |
-| Console errors | excluded | 0 | 0 | 0 |
+| Signal | Reddit feed (archived) | Reddit post (archived) | Reddit thread (archived, `old.reddit`) | Threadit `/r/webdev` | Threadit post |
+| --- | --- | --- | --- | --- | --- |
+| DOM nodes | 5,585 | 5,387 | 2,492 | 527 | 627 |
+| Accessibility nodes | 1,389 | 1,167 | 2,271 | 482 | 597 |
+| `article` | 3 | 0 (`SHREDDIT-POST`) | 0 | 3 | 1 |
+| `heading` | 15 | 1 (`Post Title: …`) | 7 | 7 | 6 |
+| `button` | 4 | 10 | 41 | 32 | 41 |
+| `link` | 50 | 38 | 257 | 26 | 27 |
+| `banner` / `main` / `navigation` | 1 / 1 / 3 | 1 / 1 / 3 | 1 / 1 / 0 | 1 / 1 / 1 | 1 / 1 / 1 |
+| `complementary` | 3 | 3 | 0 | 2 | 2 |
+| `list` / `listitem` | 3 / 10 | 3 / 9 | 36 / 202 | 2 / 5 | 2 / 5 |
+| `details` / `summary` | 15 / 15 | 8 / 8 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Console errors | excluded | 0 | 0 | 0 | 0 |
 
 ### Community header
 
@@ -101,7 +102,11 @@ Differences are scope, not omission: Threadit has no bookmarks / related-communi
 
 Threadit's post capture renders the post as a single `article` with the title as a heading, the vote pill, comment count, Share, Save and Summary controls, a **Thread TL;DR** card, then `6 comments` with a `Newest first` combobox, a guest `Log in to join the conversation.` prompt, and the tree itself: author, `OP` / `MOD` badges, age, body, and per-comment `Collapse thread`, `Comment options` and `Reply` controls (six of the first two, eighteen `Reply` controls across the nested replies).
 
-Reddit's archived counterpart was captured too, and it shows the header, post body, `Share`, and the community about panel — but **its comment subtree never populated**. The archive left a loader placeholder below the post (no comment element, no comment text in the DOM or the fetched page), so the Reddit half of the comment comparison is unavailable; only the clone's thread structure is evidenced here. Reddit's collapsing idiom is present page-wide as native `details`/`summary` pairs (8 on the post page, 15 on the community feed).
+Reddit's new-UI archive of the same post shows its header, body, `Share` and community about panel — but **its comment subtree never populated**. The archive left a loader placeholder below the post (no comment element, no comment text in the DOM or the fetched page).
+
+A second archive of the same thread on `old.reddit.com` does render comments server-side, and provides the Reddit side of the comparison: **all 18 comments** load with their authors (`Eastern_Ticket2157`, `ProfessorSpecialist`, `pustulio8819`, `ketchupadmirer`, and others), ages in `<time>` elements, per-comment scores, and `reply` / `permalink` / `save` / `report` links plus up/down vote buttons. The capture contains 18 `reply` and 18 `permalink` links, 19 `save` and 19 `report` (the extra pair belongs to the post), and 202 list items across its nested `ul`/`li` comment tree.
+
+Threadit matches that vocabulary at its own scale — 6 comments, each with author, age, score, reply, collapse and an options menu, plus OP/MOD badges — but folds Reddit's per-comment `permalink` / `save` / `report` links into the `Comment options` menu, and nests with indentation rather than the `ul`/`li` structure old Reddit emits. Reddit's other collapsing idiom is visible page-wide as native `details`/`summary` pairs (8 on the new-UI post page, 15 on the community feed); old Reddit's comment collapse is scripted instead, so it contributes no `details` elements.
 
 ## Feature-by-feature
 
@@ -114,7 +119,7 @@ Reddit's archived counterpart was captured too, and it shows the header, post bo
 | Sort control (`Best` disclosure on Reddit) | `SortBar`: Hot / New / Top + time window, `Load more posts` | AX names; Playwright test 1 switches New → Top | Match (segmented instead of dropdown) |
 | Right rail: about/community info, bookmarks, promotion | `RightRail`: Popular communities with member counts and Create a community on `/popular`; Home adds Top this week; footer links | 2 `complementary`; AX heading `Popular communities` | Match |
 | Community header: banner, `r/webdev`, Create Post, Join, members / online / rank, rules & bookmarks | `Community.jsx`: header card (avatar, name, member count, Join), flair filters, about rail with description, Members, Created, Community rules, Moderators | Community capture: `h1` r/webdev, Join button, `Community rules`, `Moderators`; Playwright test 4 (optimistic Join) | Match on identity, join, rules and moderators; no bookmarks/related-communities block (deliberate) |
-| Nested, collapsible comment threads (Reddit uses `details`/`summary` disclosures) | `CommentTree.jsx`: `6 comments`, per-comment Collapse thread / Comment options / Reply, OP and MOD badges, indented nesting, `Newest first` sort | Post capture: 6 `Collapse thread`, 6 `Comment options`, 18 `Reply`, 1 `combobox`; Reddit archive's comment subtree never populated (see *Limitations*); Playwright test 3 collapses, expands and posts a reply | Match on the clone side; Reddit comment content unavailable |
+| Nested, collapsible comment threads (Reddit uses `details`/`summary` disclosures on the new UI, scripted collapse on old) | `CommentTree.jsx`: `6 comments`, per-comment Collapse thread / Comment options / Reply, OP and MOD badges, indented nesting, `Newest first` sort | Post capture: 6 `Collapse thread`, 6 `Comment options`, 18 `Reply`, 1 `combobox`. Reddit thread capture: 18 comments, 18 `reply`, 18 `permalink`, per-comment scores, nested `ul`/`li`. Playwright test 3 collapses, expands and posts a reply | Match |
 | Search entry point with scoped placeholder ("Search in r/webdev") | `SearchBar` + `/search` with Communities / People / Posts tabs and typeahead | `search` + `searchbox` landmarks; Vitest search assertions | Match |
 | Log in / Sign up as plain links; guest feed | `/login`, `/register`; guests get a popular fallback feed | AX link names; Playwright test 1 logs in through the form | Match |
 | Upvote/downvote correctness under concurrency (Reddit behaviour, not observable via DOM) | ACID vote service: unique index, single transaction, exact deltas, retries | Vitest 13/13, incl. 20-request same-user storm and 50-user storm | Match (server-side) |
@@ -137,7 +142,7 @@ Reddit's archived counterpart was captured too, and it shows the header, post bo
 1. **The Reddit evidence is an archived snapshot** (27 May 2025), not today's live page. Reddit's current DOM may differ. The live site could not be inspected without solving a CAPTCHA or signing in, and neither was attempted.
 2. **REA's policy filter removed cross-origin evidence.** Every bundle reports `policy_filtered` with `attach_limited`; Reddit excluded 37 metadata events and 10 resources as `disallowed_origin`, Threadit excluded 5 metadata and 2 resources. Network request lists are empty throughout because observation began after load and cross-origin traffic was excluded, so **no API/network comparison was made**.
 3. **Guest view only for Threadit.** All three clone captures are signed out (`/popular`, `/r/webdev`, post detail); authenticated surfaces were exercised by Playwright instead. Counts are one moment per route, and they move with asynchronous feed/rail loading (the Home rail carries an extra "Top this week" section that `/popular` does not), so treat single-digit differences between runs as timing, not structure.
-4. **The archived Reddit thread has no comments.** The post body, community header and Share control rendered, but the comment subtree never populated — no comment element, no comment text in the DOM or the fetched page, only a loader placeholder below the post. Comment content, nesting and voting therefore could not be compared against Reddit; the thread evidence in this audit is the clone's capture plus Playwright test 3, and Reddit's collapse idiom is inferred from the `details`/`summary` pairs present on its pages.
+4. **The archived Reddit thread has no comments.** The post body, community header and Share control rendered, but the comment subtree never populated — no comment element, no comment text in the DOM or the fetched page, only a loader placeholder below the post. The separate `old.reddit.com` capture of the same thread does render its 18 server-side comments and supplies the comment-structure comparison above, but it is a different Reddit front-end: it evidences Reddit's thread semantics, not the markup of the current UI, whose comment content remains unavailable.
 5. **Snapshot ≠ behaviour.** REA proves rendered structure. All interaction claims rest on the Playwright suite and on Vitest.
 6. **AI provider path not exercised.** With no `AI_API_KEY`, summaries and mod checks used the deterministic fallback; the same code path calls Gemini/OpenAI when a key is configured.
 7. **No source-level claim.** Matching DOM regions and accessible names cannot establish that any Reddit source was reused, and none was.
@@ -170,6 +175,13 @@ $REA capture-web-screenshot http://127.0.0.1:9222 <targetId> --json
 ```
 
 The app side must be running and seeded: `npm run seed -- --reset`, API on `127.0.0.1:5050`, Vite on `127.0.0.1:5173`.
+
+To check this document against the committed evidence without recapturing anything:
+
+```bash
+npm run audit:verify
+# re-derives every count below from docs/rea-evidence/; exits non-zero on drift
+```
 
 ## Conclusion
 

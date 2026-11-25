@@ -19,7 +19,8 @@
     "test": "npm run test -w server",
     "test:e2e": "playwright test",
     "lint": "npm run lint -w server && npm run lint -w client",
-    "format": "prettier --write \"{server,client}/src/**/*.{js,jsx}\" \"*.md\" \"docs/*.md\""
+    "format": "prettier --write \"{server,client}/src/**/*.{js,jsx}\" \"*.md\" \"docs/*.md\"",
+    "audit:verify": "node scripts/verify-audit.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
