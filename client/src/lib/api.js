@@ -19,9 +19,14 @@ export const getAccessToken = () => accessToken;
 
 export const socketOrigin = () => ORIGIN || window.location.origin;
 
-/** Non-sensitive marker set alongside the HTTP-only refresh cookie. */
+/**
+ * Non-sensitive marker set alongside the HTTP-only refresh cookie. With a cross-origin API
+ * (e.g. Vercel SPA + Render API) JavaScript cannot read the API-domain cookie, so probe
+ * refresh unconditionally and let the cookie itself decide.
+ */
 export const hasSessionHint = () =>
-  typeof document !== 'undefined' && document.cookie.split('; ').includes('threadit_session=1');
+  Boolean(ORIGIN) ||
+  (typeof document !== 'undefined' && document.cookie.split('; ').includes('threadit_session=1'));
 
 export const clearSessionHint = () => {
   if (typeof document === 'undefined') return;

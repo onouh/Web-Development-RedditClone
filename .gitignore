@@ -13,6 +13,8 @@ server/uploads/*
 .mongo-data/
 .cloud-attachments/
 .freebuff/
+.tools/
+e2e/.auth/
 playwright-report/
 test-results/
 .playwright/

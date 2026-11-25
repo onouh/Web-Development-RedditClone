@@ -37,9 +37,9 @@ export default function Layout() {
           <Sidebar />
         </aside>
 
-        <div className="min-w-0 flex-1 px-2.5 py-4 sm:px-4">
+        <main className="min-w-0 flex-1 px-2.5 py-4 sm:px-4">
           <Outlet />
-        </div>
+        </main>
       </div>
 
       {drawerOpen && (

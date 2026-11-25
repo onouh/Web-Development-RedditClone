@@ -51,14 +51,24 @@ export function monitorPage(page, label) {
   return errors;
 }
 
-export async function openPage(browser, { viewport = { width: 1440, height: 900 }, label = 'page' } = {}) {
+export async function openPage(
+  browser,
+  { viewport = { width: 1440, height: 900 }, label = 'page', as = 'alice' } = {},
+) {
+  const storageState = as ? path.resolve('e2e/.auth', `${as}.json`) : undefined;
   const context = await browser.newContext({
     baseURL: BASE_URL,
     viewport,
     colorScheme: 'light',
+    storageState,
   });
   const page = await context.newPage();
   const errors = monitorPage(page, label);
+  if (storageState) {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+    await expect(page.locator('article').first()).toBeVisible();
+  }
   return { context, page, errors };
 }
 

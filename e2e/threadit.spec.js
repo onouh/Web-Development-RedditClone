@@ -12,7 +12,7 @@ test.beforeAll(() => ensureScreenshotDir());
 test('desktop shell: sticky bar, three columns, sidebar toggle, sorting and load more', async ({
   browser,
 }) => {
-  const { context, page, errors } = await openPage(browser, { label: 'desktop' });
+  const { context, page, errors } = await openPage(browser, { label: 'desktop', as: null });
   try {
     await login(page, 'alice_dev');
 
@@ -89,8 +89,6 @@ test('post votes: upvote, toggle off, downvote, then neutral; AI summary renders
 }) => {
   const { context, page, errors } = await openPage(browser, { label: 'vote-summary' });
   try {
-    await login(page, 'alice_dev');
-
     const article = page.locator('article').first();
     await expect(article).toBeVisible();
     const upvote = article.getByRole('button', { name: 'Upvote', exact: true });
@@ -178,8 +176,6 @@ test('post votes: upvote, toggle off, downvote, then neutral; AI summary renders
 test('post detail: nested thread collapses, expands and accepts a reply', async ({ browser }) => {
   const { context, page, errors } = await openPage(browser, { label: 'post-detail' });
   try {
-    await login(page, 'alice_dev');
-
     const postTitle = 'What actually happens when two users upvote the same post at the same time?';
     await page
       .locator('article')
@@ -229,7 +225,6 @@ test('post detail: nested thread collapses, expands and accepts a reply', async 
 test('community join flips optimistically before the server responds', async ({ browser }) => {
   const { context, page, errors } = await openPage(browser, { label: 'join' });
   try {
-    await login(page, 'alice_dev');
     await page.goto('/r/gaming');
     await expect(page.getByRole('heading', { level: 1, name: 'r/gaming' })).toBeVisible();
 
@@ -291,12 +286,9 @@ test('community join flips optimistically before the server responds', async ({ 
 test('two users exchange realtime chat messages; a comment notification arrives live', async ({
   browser,
 }) => {
-  const alice = await openPage(browser, { label: 'alice' });
-  const bob = await openPage(browser, { label: 'bob' });
+  const alice = await openPage(browser, { label: 'alice', as: 'alice' });
+  const bob = await openPage(browser, { label: 'bob', as: 'bob' });
   try {
-    await login(alice.page, 'alice_dev');
-    await login(bob.page, 'bob_builder');
-
     await alice.page.getByRole('button', { name: 'Open chat' }).click();
     await bob.page.getByRole('button', { name: 'Open chat' }).click();
     await expect(alice.page.getByText('Chats', { exact: true })).toBeVisible();
@@ -358,7 +350,6 @@ test('two users exchange realtime chat messages; a comment notification arrives 
 test('moderator AI rule check works and the theme toggles dark/light', async ({ browser }) => {
   const { context, page, errors } = await openPage(browser, { label: 'mod-theme' });
   try {
-    await login(page, 'alice_dev');
     await page.goto('/r/webdev/mod');
     await expect(page.getByRole('heading', { name: 'Mod tools' })).toBeVisible();
 
@@ -402,8 +393,6 @@ test('mobile viewport: single column, hidden rail and a working navigation drawe
     label: 'mobile',
   });
   try {
-    await login(page, 'alice_dev');
-
     const header = page.locator('header').first();
     await expect(header).toBeVisible();
     expect(await header.evaluate((element) => getComputedStyle(element).position)).toBe('sticky');
