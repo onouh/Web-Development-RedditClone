@@ -8,7 +8,7 @@ Browser: Chrome for Testing `159.0.8154.6`, headless, driven over CDP at `127.0.
 
 Threadit reproduces the **observable structure and behaviour** of Reddit's public community page: the same regions (top bar, primary navigation, feed of article cards, community rail), the same interactive vocabulary (vote pill, comment count, share, sort, join), and the same search/auth entry points. It does *not* reproduce Reddit's DOM, component names, class names or styling, and it is not claimed to.
 
-Four captures back this up: Reddit's archived community feed and post page, and the clone's `/popular`, `/r/webdev` and post-detail routes, so the community header, rules, moderator list and comment thread are compared directly rather than inferred from the feed.
+Five captures back this up: Reddit's archived community feed and post page, and the clone's `/popular`, `/r/webdev` and post-detail routes, so the community header, rules and moderator list are compared directly rather than inferred from the feed, and the comment thread is captured on the clone side (Reddit's archived comments did not load — see *Limitations*).
 
 This is **structural and behavioural parity**, not source-level equivalence. REA performs passive CDP inspection; it can prove what the clone renders and exposes, never that a particular upstream source file was copied.
 
@@ -26,13 +26,13 @@ Behavioural claims (voting, joins, nested replies, realtime chat, moderator tool
 
 | Target | URL | Target ID | Evidence |
 | --- | --- | --- | --- |
-| Reddit r/webdev (archived) | `https://web.archive.org/web/20250527061510/https://www.reddit.com/r/webdev/` | `5F7D0A728DFC67C809AFDE5A3C78BD58` | `.tools/rea/evidence/reddit-archive-inspect.json` (971 KB), `reddit-rea.png` |
-| Threadit Popular (guest, recaptured after the fix) | `http://127.0.0.1:5173/popular` | `CCC1D0FECA2B88542FB8DBB45B31D367` | `.tools/rea/evidence/threadit-postfix-inspect.json` (296 KB), `threadit-postfix-rea.png` |
-| Threadit community (guest) | `http://127.0.0.1:5173/r/webdev` | `A2064C2471B4675881C5588BD4F5DD4A` | `.tools/rea/evidence/threadit-community-inspect.json` (176 KB), `threadit-community-rea.png` |
-| Threadit post detail (guest) | `http://127.0.0.1:5173/r/webdev/comments/6b0707e87bbe4196d2cbf7ab` | `EE01B6B9997C28A32C53244ADF434611` | `.tools/rea/evidence/threadit-post-inspect.json` (204 KB), `threadit-post-rea.png` |
-| Reddit post + community header (archived) | `https://web.archive.org/web/20250527052034/https://www.reddit.com/r/webdev/comments/1kwe45l/the_skills_no_one_teaches_engineers_mindset/` | `0E4F7E3A7B9DE0E540705E08917B2317` | `.tools/rea/evidence/reddit-post-inspect.json` (1,019 KB), `reddit-post-rea.png` |
+| Reddit r/webdev (archived) | `https://web.archive.org/web/20250527061510/https://www.reddit.com/r/webdev/` | `5F7D0A728DFC67C809AFDE5A3C78BD58` | `docs/rea-evidence/reddit-archive-inspect.json` (971 KB), `docs/rea-evidence/reddit-rea.png` |
+| Threadit Popular (guest, recaptured after the fix) | `http://127.0.0.1:5173/popular` | `CCC1D0FECA2B88542FB8DBB45B31D367` | `docs/rea-evidence/threadit-postfix-inspect.json` (296 KB), `docs/rea-evidence/threadit-postfix-rea.png` |
+| Threadit community (guest) | `http://127.0.0.1:5173/r/webdev` | `A2064C2471B4675881C5588BD4F5DD4A` | `docs/rea-evidence/threadit-community-inspect.json` (176 KB), `docs/rea-evidence/threadit-community-rea.png` |
+| Threadit post detail (guest) | `http://127.0.0.1:5173/r/webdev/comments/6b0707e87bbe4196d2cbf7ab` | `EE01B6B9997C28A32C53244ADF434611` | `docs/rea-evidence/threadit-post-inspect.json` (204 KB), `docs/rea-evidence/threadit-post-rea.png` |
+| Reddit post + community header (archived) | `https://web.archive.org/web/20250527052034/https://www.reddit.com/r/webdev/comments/1kwe45l/the_skills_no_one_teaches_engineers_mindset/` | `0E4F7E3A7B9DE0E540705E08917B2317` | `docs/rea-evidence/reddit-post-inspect.json` (1,019 KB), `docs/rea-evidence/reddit-post-rea.png` |
 
-The `.json` bundles and decoded `.png` captures are under `.tools/`, which is gitignored; the findings are recorded here so the audit survives without them. The pre-fix Threadit bundle is kept alongside (`threadit-inspect.json`, target `138C54CF1A699863DD2528B0CABD1A23`) so the effect of the landmark fix can be checked directly.
+Every capture above is committed under `docs/rea-evidence/`, so the counts in this document can be re-derived from the repository alone: `dom.nodes`, `accessibility.nodes`, `resources` and `console.events` are read straight out of each `*-inspect.json`, and each `*-rea.png` is the viewport image decoded from the corresponding `capture-web-screenshot` result. The pre-fix Threadit bundle is committed alongside them as `docs/rea-evidence/threadit-inspect.json` (target `138C54CF1A699863DD2528B0CABD1A23`) so the effect of the landmark fix can be checked directly.
 
 > Live `www.reddit.com` served a reCAPTCHA (`Reddit - Prove your humanity`), `r/webdev` redirected to a JavaScript challenge, and `old.reddit.com` redirected to login (`reason=lor2`). Those challenges were **not** bypassed. The Wayback Machine snapshot above was used instead and is the only Reddit evidence in this document.
 
@@ -149,17 +149,18 @@ Reddit's archived counterpart was captured too, and it shows the header, post bo
 .tools/node24/bin/node .tools/rea/node_modules/rea-agents/scripts/rea.mjs --version --json
 
 # Headless Chrome with CDP
-"/Users/<you>/Library/Caches/ms-playwright/chromium-1255/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
-  --headless=new --remote-debugging-port=9222 \
+# Resolve the Chrome for Testing binary Playwright installed, then serve CDP on 9222.
+CHROME="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+"$CHROME" --headless=new --remote-debugging-port=9222 \
   --user-data-dir=.tools/rea-profile about:blank
-# The path is printed by: node -e "console.log(require('playwright').chromium.executablePath())"
 
 REA=".tools/node24/bin/node .tools/rea/node_modules/rea-agents/scripts/rea.mjs"
 
 # Open a tab and read its target id
 curl -s -X PUT "http://127.0.0.1:9222/json/new?<urlencoded-url>" | jq -r .id
 
-# Passive capture (DOM + accessibility + resources + console metadata)
+# Passive capture (DOM + accessibility + resources + console metadata).
+# Redirect into docs/rea-evidence/ so the bundle is tracked with this audit.
 $REA inspect-web-page http://127.0.0.1:9222 <targetId> \
   --observation-ms 2500 --include-accessibility-text \
   --include-console-text --include-storage-keys --json
