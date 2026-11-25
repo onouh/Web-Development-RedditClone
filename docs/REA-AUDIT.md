@@ -25,9 +25,9 @@ Behavioural claims (voting, joins, nested replies, realtime chat, moderator tool
 | Target | URL | Target ID | Evidence |
 | --- | --- | --- | --- |
 | Reddit r/webdev (archived) | `https://web.archive.org/web/20250527061510/https://www.reddit.com/r/webdev/` | `5F7D0A728DFC67C809AFDE5A3C78BD58` | `.tools/rea/evidence/reddit-archive-inspect.json` (971 KB), `reddit-rea.png` |
-| Threadit Popular (guest) | `http://127.0.0.1:5173/popular` | `138C54CF1A699863DD2528B0CABD1A23` | `.tools/rea/evidence/threadit-inspect.json` (319 KB), `threadit-rea.png` |
+| Threadit Popular (guest, recaptured after the fix) | `http://127.0.0.1:5173/popular` | `CCC1D0FECA2B88542FB8DBB45B31D367` | `.tools/rea/evidence/threadit-postfix-inspect.json` (296 KB), `threadit-postfix-rea.png` |
 
-Both `.json` bundles and decoded `.png` captures are under `.tools/`, which is gitignored; the findings are recorded here so the audit survives without them.
+The `.json` bundles and decoded `.png` captures are under `.tools/`, which is gitignored; the findings are recorded here so the audit survives without them. The pre-fix Threadit bundle is kept alongside (`threadit-inspect.json`, target `138C54CF1A699863DD2528B0CABD1A23`) so the effect of the landmark fix can be checked directly.
 
 > Live `www.reddit.com` served a reCAPTCHA (`Reddit - Prove your humanity`), `r/webdev` redirected to a JavaScript challenge, and `old.reddit.com` redirected to login (`reason=lor2`). Those challenges were **not** bypassed. The Wayback Machine snapshot above was used instead and is the only Reddit evidence in this document.
 
@@ -38,21 +38,23 @@ Counts come from the two `normalized_result` bundles (`dom.nodes`, `accessibilit
 | Signal | Reddit r/webdev (archived) | Threadit `/popular` |
 | --- | --- | --- |
 | Title | `webdev: reddit for web developers` | `Threadit — Dive into anything` |
-| DOM nodes | 5,585 | 1,081 |
-| Accessibility nodes | 1,389 | 998 |
+| DOM nodes | 5,585 | 1,002 |
+| Accessibility nodes | 1,389 | 899 |
 | Resources | 235 | 13 |
 | `banner` (header) | 1 | 1 |
-| `main` | 1 | 1 (0 at capture — see *Differences*) |
+| `main` | 1 | 1 |
 | `navigation` | 3 | 1 |
 | `complementary` (rails) | 3 | 2 |
 | `article` (feed cards) | 3 | 10 |
 | `button` | 4 | 76 |
-| `link` | 50 | 58 |
-| `heading` | 15 | 13 |
-| `list` / `listitem` | 3 / 10 | 2 / 11 |
+| `link` | 50 | 53 |
+| `heading` | 15 | 12 |
+| `list` / `listitem` | 3 / 10 | 1 / 6 |
 | `form` | 2 | 0 (search is a `search` landmark) |
 | `searchbox` | 0 (`textbox` 2) | 1 (`Search communities and users`) |
-| `image` | 47 | 96 |
+| `image` | 47 | 91 |
+
+The Threadit column is the post-fix bundle. The fix itself cannot change the node count (`div` → `main` is a rename), but these numbers differ slightly from the pre-fix bundle because the page loads asynchronously and the rails differ by route: the pre-fix bundle contains a "Top this week" section, which only `Home.jsx` renders, so the two captures were not of the identical rail state. Region for region they match.
 
 Read the absolute numbers with care:
 
@@ -61,6 +63,8 @@ Read the absolute numbers with care:
 - Threadit is a flat React tree with semantic elements, so its 76 buttons are the vote/comment/share/save/join controls of ten fully rendered cards.
 
 The comparison that matters is the **set of regions and controls**, not the node count.
+
+The fresh Threadit console was also clean: Vite's connect banner, the React DevTools notice and two React Router v7 future-flag warnings, with **no errors and no failed local requests**. Reddit's console evidence was excluded by REA's origin policy (`disallowed_origin`), so no equivalent statement is possible for the archived page.
 
 ## Feature-by-feature
 
@@ -71,7 +75,7 @@ The comparison that matters is the **set of regions and controls**, not the node
 | Feed of article cards: community, author, age, title, body preview | `PostCard.jsx` inside `PostList`: community icon, `u/author`, age, flair, title, preview | 10 `article` roles; AX heading list mirrors post titles | Match |
 | Vote pill with score, up/down, comment count, Share, overflow menu | `VoteControl`, comment link, Share, `Post options` | AX names `Upvote`, `Downvote`, `Share`, `Post options`, `Summary`, `Save post` | Match |
 | Sort control (`Best` disclosure on Reddit) | `SortBar`: Hot / New / Top + time window, `Load more posts` | AX names; Playwright test 1 switches New → Top | Match (segmented instead of dropdown) |
-| Right rail: about/community info, bookmarks, promotion | `RightRail`: Popular communities with member counts, Create a community, Top this week, footer links | 2 `complementary`; AX headings `Popular communities`, `Top this week` | Match |
+| Right rail: about/community info, bookmarks, promotion | `RightRail`: Popular communities with member counts and Create a community on `/popular`; Home adds Top this week; footer links | 2 `complementary`; AX heading `Popular communities` | Match |
 | Community header: banner, `r/webdev`, Create Post, Join, members / online / rank, rules & bookmarks | `Community.jsx`: banner, name, Join, sort, rules, member count | Not in either REA capture; Playwright test 4 (optimistic Join) + seed data | Match (verified behaviourally, not by snapshot) |
 | Nested, collapsible comment threads (Reddit renders `details`/`summary`, 15 each) | `CommentTree.jsx` with materialised-path replies and collapse | Playwright test 3: seeded thread collapses/expands, real reply lands in tree | Match |
 | Search entry point with scoped placeholder ("Search in r/webdev") | `SearchBar` + `/search` with Communities / People / Posts tabs and typeahead | `search` + `searchbox` landmarks; Vitest search assertions | Match |
@@ -85,7 +89,7 @@ The comparison that matters is the **set of regions and controls**, not the node
 
 ## Differences found, and what changed
 
-- **`main` landmark.** Reddit's capture exposes `role=main`; Threadit's layout rendered its outlet in a plain `div`, so the accessibility tree had no `main` role. Fixed: `client/src/components/Layout.jsx` now renders `<main>` around `<Outlet />` (same classes, no visual change). The Threadit evidence bundle predates this one-line fix, so its `main` count of 0 is expected; a fresh capture would show 1.
+- **`main` landmark.** Reddit's capture exposes `role=main`; Threadit's layout rendered its outlet in a plain `div`, so the accessibility tree had no `main` role. Fixed: `client/src/components/Layout.jsx` now renders `<main>` around `<Outlet />` (same classes, no visual change). The pre-fix bundle recorded `main` 0; the fresh capture records exactly one `main` role and one `MAIN` element, with `banner`, `navigation` and both `complementary` rails unchanged.
 - **Landmark granularity.** Reddit exposes 3 `navigation` and 3 `complementary` landmarks (primary, resources, footer / entity panel, promotion, community info). Threadit exposes 1 and 2 respectively. Simpler, and intentional: the clone has one primary nav and two rails.
 - **No custom elements.** Reddit's `SHREDDIT-*` / `FACEPLATE-*` / `REDDIT-*` components are its private UI platform. Threadit deliberately uses semantic HTML and Tailwind instead; reproducing the component names would be cosmetic mimicry with no behavioural value.
 - **No skip-to-content link.** Reddit's first accessible link is "Skip to main content"; Threadit has none. Noted, not changed — outside the assignment's scope.
@@ -94,7 +98,7 @@ The comparison that matters is the **set of regions and controls**, not the node
 
 1. **The Reddit evidence is an archived snapshot** (27 May 2025), not today's live page. Reddit's current DOM may differ. The live site could not be inspected without solving a CAPTCHA or signing in, and neither was attempted.
 2. **REA's policy filter removed cross-origin evidence.** Both bundles report `policy_filtered` with `attach_limited`; Reddit excluded 37 metadata events and 10 resources as `disallowed_origin`, Threadit excluded 5 metadata and 2 resources. Network request lists are empty for both because observation began after load and cross-origin traffic was excluded, so **no API/network comparison was made**.
-3. **Guest view only for Threadit.** The REA capture is the signed-out Popular page; authenticated surfaces were exercised by Playwright instead.
+3. **Guest view only for Threadit, one route and one moment.** The capture is the signed-out `/popular` page; authenticated surfaces were exercised by Playwright instead. Counts move with asynchronous feed/rail loading (the Home rail has an extra "Top this week" section that `/popular` does not), so treat single-digit differences between runs as timing, not structure.
 4. **Snapshot ≠ behaviour.** REA proves rendered structure. All interaction claims rest on the Playwright suite and on Vitest.
 5. **AI provider path not exercised.** With no `AI_API_KEY`, summaries and mod checks used the deterministic fallback; the same code path calls Gemini/OpenAI when a key is configured.
 6. **No source-level claim.** Matching DOM regions and accessible names cannot establish that any Reddit source was reused, and none was.
